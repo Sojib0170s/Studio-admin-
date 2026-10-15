@@ -1,0 +1,33 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.get('admin', false) == true ||
+        request.auth.token.get('role', '') == 'admin' ||
+        request.auth.token.email == 'ssssssgggs2@gmail.com' ||
+        request.auth.token.email == 'admin@promptstudio.ai'
+      );
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Thumbnails for Prompts and Categories
+    match /thumbnails/{allPaths=**} {
+      // Public read for mobile and web apps
+      allow read: if true;
+      // Admin write only, validating content type and maximum file size (5MB)
+      allow write: if isAdmin()
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

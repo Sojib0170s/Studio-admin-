@@ -1,0 +1,6 @@
+{
+  "name": "Prompt Studio Admin Panel",
+  "description": "Secure production-ready Admin Panel for Prompt Studio AI photo-editing prompt library, categories, Start.io ads, app settings, and activity logs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

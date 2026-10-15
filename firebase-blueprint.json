@@ -1,0 +1,148 @@
+{
+  "entities": {
+    "Prompt": {
+      "title": "Prompt",
+      "description": "An AI photo-editing prompt template with rich configuration, parameters, and preview media.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 3, "maxLength": 120, "description": "Display title of the prompt" },
+        "slug": { "type": "string", "maxLength": 140, "pattern": "^[a-z0-9-]+$", "description": "URL-safe unique identifier" },
+        "description": { "type": "string", "maxLength": 500, "description": "Brief description of the photo style" },
+        "promptText": { "type": "string", "minLength": 10, "maxLength": 4000, "description": "Full AI prompt instructions" },
+        "negativePrompt": { "type": "string", "maxLength": 2000, "description": "Undesired visual elements or artifacts" },
+        "categoryId": { "type": "string", "maxLength": 100, "description": "Reference ID to category document" },
+        "thumbnailUrl": { "type": "string", "maxLength": 1024, "description": "Download URL for preview image" },
+        "tags": { "type": "array", "description": "List of tags for filtering" },
+        "featured": { "type": "boolean", "description": "Whether to highlight on home/hero" },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"], "description": "Publication lifecycle state" },
+        "parameters": { "type": "object", "description": "Engine and rendering parameters" },
+        "copyCount": { "type": "number", "description": "Times the prompt was copied by users" },
+        "viewsCount": { "type": "number", "description": "View impressions count" },
+        "createdBy": { "type": "string", "maxLength": 128, "description": "Author UID" },
+        "createdAt": { "type": "string", "description": "ISO timestamp or server timestamp" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp or server timestamp" }
+      },
+      "required": ["title", "slug", "promptText", "categoryId", "status"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Taxonomy category grouping AI photo-editing prompts (e.g. Cinematic Portraits, Neon Cyberpunk).",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 80, "description": "Category title" },
+        "slug": { "type": "string", "maxLength": 100, "pattern": "^[a-z0-9-]+$", "description": "URL-safe slug" },
+        "description": { "type": "string", "maxLength": 400, "description": "Category summary" },
+        "thumbnailUrl": { "type": "string", "maxLength": 1024, "description": "Category icon/banner image" },
+        "displayOrder": { "type": "number", "description": "Sort priority" },
+        "isActive": { "type": "boolean", "description": "Whether category is active" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "description": "Update timestamp" }
+      },
+      "required": ["name", "slug", "displayOrder", "isActive"]
+    },
+    "StartIoAdSettings": {
+      "title": "StartIoAdSettings",
+      "description": "Start.io ad configuration remote settings for Android and iOS clients.",
+      "type": "object",
+      "properties": {
+        "masterEnabled": { "type": "boolean", "description": "Master switch for ad displays" },
+        "testMode": { "type": "boolean", "description": "SDK test mode enabled" },
+        "appIdAndroid": { "type": "string", "maxLength": 64, "description": "Official Start.io Android App ID" },
+        "appIdIos": { "type": "string", "maxLength": 64, "description": "Official Start.io iOS App ID" },
+        "banner": { "type": "object", "description": "Banner ad parameters" },
+        "interstitial": { "type": "object", "description": "Interstitial ad frequency and trigger" },
+        "rewarded": { "type": "object", "description": "Rewarded video ad parameters" },
+        "nativeAds": { "type": "object", "description": "Native ad unit settings" },
+        "gdprConsentRequired": { "type": "boolean", "description": "GDPR consent flag" },
+        "ccpaConsentRequired": { "type": "boolean", "description": "CCPA compliance flag" },
+        "updatedAt": { "type": "string", "description": "Update timestamp" },
+        "updatedBy": { "type": "string", "description": "Admin UID" }
+      },
+      "required": ["masterEnabled", "testMode"]
+    },
+    "AppConfig": {
+      "title": "AppConfig",
+      "description": "General application branding, support links, and mobile display preferences.",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string", "maxLength": 80, "description": "Application title" },
+        "tagline": { "type": "string", "maxLength": 160, "description": "Short branding slogan" },
+        "description": { "type": "string", "maxLength": 600, "description": "App description" },
+        "logoUrl": { "type": "string", "maxLength": 1024, "description": "App logo URL" },
+        "supportEmail": { "type": "string", "maxLength": 120, "description": "Customer support email" },
+        "privacyPolicyUrl": { "type": "string", "maxLength": 1024, "description": "Privacy policy URL" },
+        "termsUrl": { "type": "string", "maxLength": 1024, "description": "Terms of service URL" },
+        "heroPromptId": { "type": "string", "maxLength": 128, "description": "Featured hero prompt ID" },
+        "defaultSort": { "type": "string", "enum": ["newest", "popular", "featured"], "description": "Default list order" },
+        "cacheTtlMinutes": { "type": "number", "description": "Client cache TTL" },
+        "updatedAt": { "type": "string", "description": "Update timestamp" },
+        "updatedBy": { "type": "string", "description": "Admin UID" }
+      },
+      "required": ["appName", "supportEmail"]
+    },
+    "AdminActivityLog": {
+      "title": "AdminActivityLog",
+      "description": "Audit record of admin modifications for security and governance.",
+      "type": "object",
+      "properties": {
+        "actorEmail": { "type": "string", "maxLength": 128, "description": "Admin email who performed action" },
+        "actorUid": { "type": "string", "maxLength": 128, "description": "Admin Firebase UID" },
+        "action": { "type": "string", "maxLength": 64, "description": "Action type identifier" },
+        "targetType": { "type": "string", "maxLength": 32, "description": "Type of target entity" },
+        "targetId": { "type": "string", "maxLength": 128, "description": "ID of target document" },
+        "targetTitle": { "type": "string", "maxLength": 160, "description": "Name or title of modified item" },
+        "details": { "type": "string", "maxLength": 1000, "description": "Additional operational context" },
+        "timestamp": { "type": "string", "description": "Creation timestamp" }
+      },
+      "required": ["actorEmail", "actorUid", "action", "targetType", "targetId", "timestamp"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Safe, privacy-conscious public profile representation for registered mobile app users.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "description": "Firebase Auth UID" },
+        "email": { "type": "string", "maxLength": 128, "description": "User email address" },
+        "displayName": { "type": "string", "maxLength": 100, "description": "Public name" },
+        "photoURL": { "type": "string", "maxLength": 1024, "description": "Avatar image URL" },
+        "role": { "type": "string", "enum": ["admin", "editor", "user"], "description": "Assigned role" },
+        "status": { "type": "string", "enum": ["active", "suspended"], "description": "Account status" },
+        "createdAt": { "type": "string", "description": "Registration timestamp" },
+        "lastLoginAt": { "type": "string", "description": "Recent activity timestamp" }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/prompts/{promptId}": {
+      "schema": "Prompt",
+      "description": "Library of AI photo editing prompts, searchable and filterable."
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Prompt taxonomy categories with display ordering."
+    },
+    "/appConfig/ads": {
+      "schema": "StartIoAdSettings",
+      "description": "Start.io mobile advertising configuration."
+    },
+    "/appConfig/general": {
+      "schema": "AppConfig",
+      "description": "Global application branding and policy links."
+    },
+    "/adminActivityLogs/{logId}": {
+      "schema": "AdminActivityLog",
+      "description": "Append-only security audit trail for administrative changes."
+    },
+    "/userProfiles/{userId}": {
+      "schema": "UserProfile",
+      "description": "Privacy-conscious user accounts viewable by admins."
+    },
+    "/admins/{adminUid}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Server-provisioned trusted admin document allowlist for Zero-Trust authorization."
+    }
+  }
+}

@@ -1,0 +1,147 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for zero-trust attribute and role-based access
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Zero-Trust Admin Check:
+    // Requires authenticated session and verifies either:
+    // 1. Firebase Auth Custom Claims: { admin: true }, { isAdmin: true }, or { role: 'admin' }
+    // 2. Server-provisioned admin document in /databases/{database}/documents/admins/{uid}
+    // 3. Trusted server-managed project owner / admin allowlist email (case-insensitive & null-safe)
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.get('admin', false) == true ||
+        request.auth.token.get('isAdmin', false) == true ||
+        request.auth.token.get('role', '') == 'admin' ||
+        request.auth.token.get('role', '') == 'superadmin' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.get('email', '') != '' && (
+          request.auth.token.get('email', '').lower() == 'ssssssgggs2@gmail.com' ||
+          request.auth.token.get('email', '').lower() == 'admin@promptstudio.ai'
+        ))
+      );
+    }
+
+    // Validation blueprints
+    function isValidStartIoSettings(data) {
+      return data.masterEnabled is bool &&
+             data.testMode is bool &&
+             data.appIdAndroid is string && data.appIdAndroid.size() <= 64 &&
+             data.appIdIos is string && data.appIdIos.size() <= 64 &&
+             data.banner is map &&
+             data.interstitial is map &&
+             data.rewarded is map &&
+             data.nativeAds is map &&
+             data.gdprConsentRequired is bool &&
+             data.ccpaConsentRequired is bool;
+    }
+
+    function isValidAppConfig(data) {
+      return data.appName is string && data.appName.size() >= 2 && data.appName.size() <= 80 &&
+             data.supportEmail is string && data.supportEmail.size() <= 120;
+    }
+
+    function isValidPrompt(data) {
+      return data.title is string && data.title.size() >= 3 && data.title.size() <= 120 &&
+             data.slug is string && data.slug.size() <= 140 &&
+             data.promptText is string && data.promptText.size() >= 10 && data.promptText.size() <= 4000 &&
+             data.categoryId is string && data.categoryId.size() <= 100 &&
+             data.status in ['published', 'draft', 'archived'] &&
+             data.featured is bool &&
+             data.copyCount is number &&
+             data.viewsCount is number;
+    }
+
+    function isValidCategory(data) {
+      return data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
+             data.slug is string && data.slug.size() <= 100 &&
+             data.displayOrder is number &&
+             data.isActive is bool;
+    }
+
+    function isValidLog(data) {
+      return data.actorEmail is string && data.actorEmail.size() <= 128 &&
+             data.actorUid is string && data.actorUid.size() <= 128 &&
+             data.action is string && data.action.size() <= 64 &&
+             data.targetType is string && data.targetType.size() <= 32 &&
+             data.targetId is string && data.targetId.size() <= 128 &&
+             data.timestamp is string;
+    }
+
+    // 1. Default-deny catch-all rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Prompts Collection
+    match /prompts/{promptId} {
+      allow get: if (resource.data.status == 'published') || isAdmin();
+      allow list: if (resource.data.status == 'published') || isAdmin();
+      allow create: if isAdmin() && isValidId(promptId) && isValidPrompt(incoming());
+      allow update: if isAdmin() && isValidId(promptId) && isValidPrompt(incoming());
+      allow delete: if isAdmin() && isValidId(promptId);
+    }
+
+    // 3. Categories Collection
+    match /categories/{categoryId} {
+      allow get: if resource.data.isActive == true || isAdmin();
+      allow list: if resource.data.isActive == true || isAdmin();
+      allow create: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming());
+      allow update: if isAdmin() && isValidId(categoryId) && isValidCategory(incoming());
+      allow delete: if isAdmin() && isValidId(categoryId);
+    }
+
+    // 4. App Configuration (Ads, General)
+    match /appConfig/{configId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(configId) && (
+        configId == 'ads' ? isValidStartIoSettings(incoming()) :
+        configId == 'general' ? isValidAppConfig(incoming()) : true
+      );
+      allow delete: if false;
+    }
+
+    // 5. Admin Activity Audit Logs (Append-only)
+    match /adminActivityLogs/{logId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin() && isValidId(logId) && isValidLog(incoming());
+      // Logs are immutable and cannot be updated or deleted
+      allow update, delete: if false;
+    }
+
+    // 6. User Profiles (PII-isolated)
+    match /userProfiles/{userId} {
+      allow get: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow update: if (isSignedIn() && request.auth.uid == userId &&
+                       !incoming().diff(existing()).affectedKeys().hasAny(['role', 'status'])) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 7. Admins collection (server-managed allowlist)
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && (request.auth.uid == adminUid || isAdmin());
+      allow list: if isAdmin();
+      // Allow verified admins to manage server admin records
+      allow write: if isAdmin() && isValidId(adminUid);
+    }
+  }
+}
